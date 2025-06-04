@@ -29,6 +29,9 @@ class App:
         self.combo_quality.set('best')
         self.combo_quality.pack(side='left', padx=5)
 
+        self.var_auto_capture = tk.BooleanVar()
+        ttk.Checkbutton(frm_entry, text='Auto Cap.', variable=self.var_auto_capture).pack(side='left', padx=5)
+
         ttk.Button(frm_entry, text='Obtener Calidades', command=self.get_qualities).pack(side='left', padx=5)
         ttk.Button(frm_entry, text='Iniciar Descarga', command=self.start_download).pack(side='left', padx=5)
         ttk.Button(frm_entry, text='Añadir a Favoritos', command=self.add_favorite).pack(side='left', padx=5)
@@ -44,6 +47,7 @@ class App:
         fav_buttons.pack(side='left', fill='y')
         ttk.Button(fav_buttons, text='Iniciar Fav.', command=self.start_selected_favorite).pack(fill='x', pady=2)
         ttk.Button(fav_buttons, text='Quitar Fav.', command=self.remove_selected_favorite).pack(fill='x', pady=2)
+        ttk.Button(fav_buttons, text='Toggle Auto', command=self.toggle_auto_capture).pack(fill='x', pady=2)
 
         self.text_log = tk.Text(self.root, height=10)
         self.text_log.pack(fill='both', expand=True, padx=5, pady=5)
@@ -77,14 +81,22 @@ class App:
         if not url:
             return
         name = url
-        fav = self.fav_manager.add_favorite(name, url, self.combo_quality.get())
+        fav = self.fav_manager.add_favorite(
+            name,
+            url,
+            self.combo_quality.get(),
+            auto_capture=self.var_auto_capture.get(),
+        )
         self.refresh_favorites()
         self.log(f'Favorito agregado: {fav["name"]}')
 
     def refresh_favorites(self):
         self.list_fav.delete(0, 'end')
         for fav in self.fav_manager.favorites:
-            self.list_fav.insert('end', fav['name'])
+            name = fav['name']
+            if fav.get('auto_capture'):
+                name += ' [A]'
+            self.list_fav.insert('end', name)
 
     def on_select_favorite(self, event):
         if not self.list_fav.curselection():
@@ -94,6 +106,7 @@ class App:
         self.entry_url.delete(0, 'end')
         self.entry_url.insert(0, fav['url'])
         self.combo_quality.set(fav.get('quality', 'best'))
+        self.var_auto_capture.set(fav.get('auto_capture', False))
 
     def start_selected_favorite(self):
         if not self.list_fav.curselection():
@@ -113,6 +126,16 @@ class App:
         self.fav_manager.remove_favorite(fav['id'])
         self.refresh_favorites()
         self.log(f'Favorito eliminado: {fav["name"]}')
+
+    def toggle_auto_capture(self):
+        if not self.list_fav.curselection():
+            return
+        index = self.list_fav.curselection()[0]
+        fav = self.fav_manager.favorites[index]
+        updated = self.fav_manager.update_favorite(fav['id'], auto_capture=not fav.get('auto_capture', False))
+        self.refresh_favorites()
+        state = 'activada' if updated.get('auto_capture') else 'desactivada'
+        self.log(f'Auto captura {state} para: {updated["name"]}')
 
     def handle_auto_capture(self, fav):
         downloader = StreamDownloader(fav['url'], fav.get('quality', 'best'), log_callback=self.log)
