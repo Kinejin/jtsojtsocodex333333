@@ -8,6 +8,8 @@ FAVORITES_FILE = os.path.join(BASE_DIR, 'favorites.json')
 FFMPEG_PATH = 'ffmpeg'
 YTDLP_PATH = 'yt-dlp'
 
+SEGMENT_TIMEOUT = 60  # seconds without growth before stopping
+
 CHECK_INTERVAL = 60  # seconds
 
 for directory in (CACHE_DIR, OUTPUT_DIR):
